@@ -1,0 +1,88 @@
+{{/*
+  Templated so one file works on every machine.
+  Identity comes from chezmoi data: `email` is the default for this machine,
+  `personalEmail` is used when `machine` is "work" so personal repos still get
+  the right author. Set these at `chezmoi init` time.
+
+  Work machines additionally include ~/.gitconfig-hill for repos under ~/dev/hill
+  — that file is NOT tracked here, because it holds employer-specific config that
+  belongs beside the employer's code, not in a personal repo.
+*/ -}}
+[user]
+	name = {{ .name }}
+{{- if eq .machine "work" }}
+	email = {{ .personalEmail }}
+{{- else }}
+	email = {{ .email }}
+{{- end }}
+
+[core]
+	excludesfile = {{ .chezmoi.homeDir }}/.gitignore_global
+	pager = delta
+
+[commit]
+	gpgsign = false
+[tag]
+	gpgsign = false
+
+# Always use SSH for GitHub, even when something hands us an https URL
+[url "git@github.com:"]
+	insteadOf = https://github.com/
+
+{{ if eq .machine "work" -}}
+# Work identity, auto-applied to anything under ~/dev/hill.
+# ~/.gitconfig-hill is intentionally untracked — create it per machine.
+[includeIf "gitdir:~/dev/hill/"]
+	path = ~/.gitconfig-hill
+{{ end }}
+
+# ---------- delta: syntax-highlighted diffs ----------
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	navigate = true
+	line-numbers = true
+	side-by-side = false
+	hyperlinks = true
+	syntax-theme = Catppuccin Mocha
+
+# ---------- modern defaults ----------
+[init]
+	defaultBranch = main
+[pull]
+	rebase = true                 # linear history, no noise merge commits
+[rebase]
+	autoStash = true              # no more "cannot pull with uncommitted changes"
+	autoSquash = true
+[fetch]
+	prune = true                  # drop local refs to deleted remote branches
+	parallel = 8
+[diff]
+	algorithm = histogram         # noticeably better diffs than the default
+	colorMoved = default
+[merge]
+	conflictstyle = zdiff3        # conflict markers show the ORIGINAL too
+[branch]
+	sort = -committerdate         # most recent branches first
+[column]
+	ui = auto
+[push]
+	autoSetupRemote = true        # no --set-upstream on first push
+[rerere]
+	enabled = true                # remember conflict resolutions and replay them
+[help]
+	autocorrect = prompt
+
+# ---------- aliases ----------
+[alias]
+	st = status -sb
+	lg = log --oneline --graph --decorate --all -30
+	last = log -1 HEAD --stat
+	undo = reset --soft HEAD~1
+	wt = worktree
+	dft = difftool --tool=difftastic
+
+[difftool "difftastic"]
+	cmd = difft \"$LOCAL\" \"$REMOTE\"
+[difftool]
+	prompt = false

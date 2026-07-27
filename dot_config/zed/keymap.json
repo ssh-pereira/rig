@@ -1,0 +1,56 @@
+// Zed keymap — Hugo
+//
+// Docs: https://zed.dev/docs/key-bindings
+// See every default: cmd-shift-p → "zed: open default keymap"
+//
+// Bindings here override Zed's defaults. `context` scopes a binding to a
+// specific pane or mode, so the same key can mean different things.
+[
+  {
+    "context": "Editor",
+    "bindings": {
+      // ── Markdown ────────────────────────────────
+      // Zed already has cmd-shift-v (preview in a new tab) and cmd-k v
+      // (preview in a split). cmd-k v is a two-step chord, so this is a
+      // one-press alias for the split version — the useful one for long docs,
+      // because it scroll-syncs with the editor.
+      "cmd-shift-m": "markdown::OpenPreviewToTheSide",
+
+      // ── Editing ─────────────────────────────────
+      "cmd-d": "editor::DuplicateLineDown",
+      "cmd-shift-d": "editor::SelectNext",
+      "alt-up": "editor::MoveLineUp",
+      "alt-down": "editor::MoveLineDown",
+      "cmd-/": "editor::ToggleComments",
+      "cmd-shift-k": "editor::DeleteLine",
+
+      // Multi-cursor above/below
+      "cmd-alt-up": "editor::AddSelectionAbove",
+      "cmd-alt-down": "editor::AddSelectionBelow",
+
+      // ── Navigation ──────────────────────────────
+      "cmd-shift-o": "outline::Toggle",
+      "cmd-alt-left": "pane::GoBack",
+      "cmd-alt-right": "pane::GoForward"
+    }
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      // ── Panels ──────────────────────────────────
+      "cmd-b": "workspace::ToggleLeftDock",
+      "cmd-alt-b": "workspace::ToggleRightDock",
+      "cmd-j": "workspace::ToggleBottomDock",
+      "cmd-shift-e": "project_panel::ToggleFocus",
+      "cmd-shift-g": "git_panel::ToggleFocus",
+      "ctrl-`": "terminal_panel::ToggleFocus"
+    }
+  },
+  {
+    "context": "Terminal",
+    "bindings": {
+      // Let the editor terminal behave like a normal shell
+      "cmd-k": "terminal::Clear"
+    }
+  }
+]

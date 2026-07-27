@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# tmux-cpu — CPU and memory per tmux pane.
+#
+# Each pane is a shell plus everything it spawned. A pane running `claude` is
+# really zsh → node → its children, so this sums the whole process tree under
+# each pane's PID. `top` can't tell you this because it has no idea which pane
+# a process belongs to.
+#
+# Usage:
+#   tmux-cpu           one snapshot
+#   tmux-cpu -w        live, refreshing every 2s
+#   tmux-cpu -w 5      live, every 5s
+
+set -uo pipefail
+
+WATCH=0
+INTERVAL=2
+if [[ "${1:-}" == "-w" || "${1:-}" == "--watch" ]]; then
+  WATCH=1
+  [[ -n "${2:-}" ]] && INTERVAL="$2"
+fi
+
+render() {
+  if ! tmux info >/dev/null 2>&1; then
+    echo "No tmux server running."
+    return 1
+  fi
+
+  local ps_snap panes
+  ps_snap=$(ps -Ao pid=,ppid=,pcpu=,rss=,comm=)
+  panes=$(tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index}|#{pane_pid}|#{pane_current_command}|#{?pane_active,*, }|#{pane_title}')
+
+  printf '%s\n%s' "$ps_snap" "$panes" | awk -F'|' '
+    # An uninitialised awk variable used as a subscript is the STRING "", not 0.
+    # Without this, the first row lands in rows[""] and rows[0] stays empty.
+    BEGIN { nr = 0; total_cpu = 0; total_mem = 0 }
+
+    # ---- first block: the ps table (no pipes, so split manually) ----
+    NF < 2 {
+      n = split($0, f, /[ \t]+/)
+      # f[1] may be empty from leading whitespace
+      i = (f[1] == "" ? 2 : 1)
+      pid = f[i]; ppid = f[i+1]; pcpu = f[i+2]; rss = f[i+3]
+      cmd = f[i+4]
+      cpu[pid] = pcpu
+      mem[pid] = rss
+      name[pid] = cmd
+      kids[ppid] = (ppid in kids ? kids[ppid] " " pid : pid)
+      next
+    }
+
+    # ---- second block: the pane table ----
+    {
+      loc = $1; ppid = $2; pcmd = $3; active = $4
+
+      # iterative DFS over the process tree rooted at this pane
+      delete stack
+      sp = 0
+      stack[sp++] = ppid
+      tc = 0; tm = 0; procs = 0
+      hot = ""; hotcpu = -1
+
+      while (sp > 0) {
+        p = stack[--sp]
+        if (!(p in cpu)) continue
+        tc += cpu[p]
+        tm += mem[p]
+        procs++
+        if (cpu[p] > hotcpu) { hotcpu = cpu[p]; hot = name[p] }
+        if (p in kids) {
+          n = split(kids[p], ch, " ")
+          for (j = 1; j <= n; j++) stack[sp++] = ch[j]
+        }
+      }
+
+      # NOTE: build the label in its own statement. Concatenation inside a
+      # ternary inside an argument list parses ambiguously in awk and silently
+      # yields an empty string.
+      # ASCII marker on purpose: awk pads %-22s by BYTES, not display columns.
+      # A multi-byte glyph like "▸" (3 bytes) eats 2 columns of padding and
+      # misaligns that row against the ASCII ones.
+      if (active == "*") label = "> " loc
+      else               label = "  " loc
+
+      rows[nr] = sprintf("%-22s %-12s %7.1f %9.1f %6d  %s", label, pcmd, tc, tm/1024, procs, hot)
+      sortkey[nr] = tc
+      nr++
+      total_cpu += tc
+      total_mem += tm
+    }
+
+    END {
+      printf "\033[1m%-22s %-12s %7s %9s %6s  %s\033[0m\n", \
+             "  PANE", "CMD", "CPU%", "MEM(MB)", "PROCS", "TOP PROCESS"
+      printf "  %s\n", "───────────────────────────────────────────────────────────────────────────"
+
+      # simple insertion sort, descending by CPU
+      for (i = 0; i < nr; i++) order[i] = i
+      for (i = 1; i < nr; i++) {
+        k = order[i]; j = i - 1
+        while (j >= 0 && sortkey[order[j]] < sortkey[k]) { order[j+1] = order[j]; j-- }
+        order[j+1] = k
+      }
+
+      for (i = 0; i < nr; i++) {
+        c = sortkey[order[i]]
+        col = (c >= 80 ? "\033[31m" : (c >= 30 ? "\033[33m" : ""))
+        printf "%s%s\033[0m\n", col, rows[order[i]]
+      }
+
+      printf "  %s\n", "───────────────────────────────────────────────────────────────────────────"
+      printf "\033[1m  %-34s %7.1f %9.1f\033[0m\n", "TOTAL (" nr " panes)", total_cpu, total_mem/1024
+      printf "\033[2m  CPU%% is per-core: 100%% = one full core. This machine has %d cores.\033[0m\n", '"$(sysctl -n hw.ncpu)"'
+    }
+  '
+}
+
+if [[ $WATCH -eq 1 ]]; then
+  # Flicker-free redraw:
+  #   \033[?1049h  switch to the alternate screen, so quitting restores the shell
+  #   \033[?25l    hide the cursor (it would blink around mid-redraw)
+  #   \033[H       home the cursor instead of clearing — we overwrite in place
+  #   \033[J       erase from the cursor down, AFTER writing, to clear leftovers
+  #                from a taller previous frame
+  # Clearing the screen before drawing is what caused the blink: it leaves the
+  # terminal blank for however long the render takes.
+  cleanup() { printf '\033[?25h\033[?1049l'; exit 0; }
+  trap cleanup INT TERM
+
+  printf '\033[?1049h\033[?25l'
+  while true; do
+    # Append ESC[K (erase to end of line) to every line. Without it, a shorter
+    # line leaves the tail of the previous frame behind — "bash" overwritten by
+    # "-zsh" rendered as "-zshsh". \033[J at the end only clears whole leftover
+    # LINES, not leftover characters within a line.
+    frame=$(render | sed $'s/$/\033[K/')
+    printf '\033[H\033[1;36m tmux-cpu\033[0m  \033[2mrefreshing every %ss — Ctrl-C to exit\033[0m\n\n%s\n\033[J' \
+           "$INTERVAL" "$frame"
+    command sleep "$INTERVAL"
+  done
+else
+  render
+fi

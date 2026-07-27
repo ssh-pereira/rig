@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────
+#  Ghostty — ~/.config/ghostty/config
+#  Reload in-app with Cmd+Shift+, — full docs: `ghostty +show-config --default --docs`
+# ─────────────────────────────────────────────────────────────
+
+# ---------- Font ----------
+# Geist Mono has no Nerd Font icons, so the prompt's git/rust/docker glyphs
+# render as blanks. Listing a second font-family makes it a FALLBACK: Ghostty
+# uses Geist Mono for text and pulls only the missing icons from the symbols
+# font. Keeps the typeface you want without switching to a patched font.
+font-family = "Geist Mono"
+font-family = "Symbols Nerd Font Mono"
+font-size = 14
+font-thicken = true
+adjust-cell-height = 12%
+
+# ---------- Theme ----------
+# Follows macOS light/dark automatically. `ghostty +list-themes` to browse.
+theme = light:Catppuccin Latte,dark:Catppuccin Mocha
+background-opacity = 0.97
+background-blur-radius = 20
+
+# ---------- Window ----------
+window-padding-x = 12
+window-padding-y = 10
+window-padding-balance = true
+window-decoration = true
+window-save-state = always
+macos-titlebar-style = tabs
+macos-option-as-alt = true
+
+# NOTE: Ghostty does not allow trailing comments on a value line.
+# macos-option-as-alt is REQUIRED for the tmux Option+hjkl pane bindings to work.
+
+# ---------- Cursor ----------
+cursor-style = block
+cursor-style-blink = false
+mouse-hide-while-typing = true
+
+# ---------- Scrollback ----------
+scrollback-limit = 100000
+copy-on-select = clipboard
+
+# ---------- Shell ----------
+shell-integration = zsh
+shell-integration-features = cursor,sudo,title
+
+# ---------- Quick terminal (drop-down from the top, like Guake/iTerm hotkey) ----------
+keybind = global:cmd+grave_accent=toggle_quick_terminal
+
+# ---------- Keybinds ----------
+keybind = cmd+shift+r=reload_config
+keybind = cmd+k=clear_screen
+keybind = cmd+plus=increase_font_size:1
+keybind = cmd+minus=decrease_font_size:1
+keybind = cmd+zero=reset_font_size

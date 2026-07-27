@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# tmux-sessions — fzf session picker showing live CPU, memory and Claude context.
+#
+# Replaces tmux's built-in `choose-session`, which can't show this: its format is
+# expanded once when the list is drawn, and `#(shell)` in tmux is asynchronous —
+# the result arrives on a later redraw that never happens for a static list. An
+# fzf popup renders whatever we want, immediately.
+#
+# Bound to prefix + S via `display-popup -E`.
+#
+# Keys:  Enter switch · Ctrl-X kill session · Ctrl-R rename · Esc cancel
+
+set -uo pipefail
+
+STATS=~/.local/bin/tmux-stats
+
+CACHE="$HOME/.cache/tmux/stats"
+
+# Compact fixed-width columns with a header, instead of repeating "cpu"/"mem"
+# labels on every row — those made the lines wider than the list pane, so the
+# memory column got truncated to "m··".
+#
+# Reads the cache file once in awk rather than calling `tmux-stats --get` per
+# row, which also drops N subprocess spawns per redraw.
+build_list() {
+  "$STATS" >/dev/null 2>&1          # refresh the cache before drawing
+  tmux list-sessions -F '#{session_name}|#{session_windows}|#{session_attached}' 2>/dev/null |
+  awk -F'|' -v cache="$CACHE" '
+    BEGIN {
+      while ((getline line < cache) > 0) {
+        split(line, a, "\t")
+        cpu[a[1]] = a[2]; mem[a[1]] = a[3]; ctx[a[1]] = a[4]
+      }
+    }
+    {
+      name = $1; wins = $2; att = $3
+      marker = (att != "0" ? "→ " : "  ")
+      c = (name in cpu ? cpu[name] : "0.0")
+      m = (name in mem ? mem[name] "M" : "-")
+      x = (name in ctx ? ctx[name] : "-")
+      # sort key first (CPU desc), then the fzf key, then the display columns
+      printf "%09.1f\t%s\t%s%-18s %2sw %6s%% %6s %5s\n", c, name, marker, name, wins, c, m, x
+    }
+  ' | sort -rn | cut -f2-
+}
+
+# --list prints exactly what the picker will show, without opening fzf.
+# Useful for checking column widths against the popup's list pane.
+if [[ "${1:-}" == "--list" ]]; then
+  printf '%s\n' "$(printf '  %-18s %-3s %7s %6s %5s' 'SESSION' 'WIN' 'CPU%' 'MEM' 'CTX')"
+  build_list | cut -f2-
+  echo
+  printf 'widest line: %s columns\n' "$(build_list | cut -f2- | awk '{print length}' | sort -rn | head -1)"
+  exit 0
+fi
+
+# Header built with the same field widths as the rows, so the columns line up.
+HEADER=$(printf 'enter switch · ctrl-x kill · ctrl-r rename\n  %-18s %-3s %7s %6s %5s' \
+                'SESSION' 'WIN' 'CPU%' 'MEM' 'CTX')
+
+# Preview pane: the windows and panes inside the highlighted session.
+preview_cmd='tmux list-windows -t {1} -F "  #{window_index}: #{window_name} (#{window_panes} panes)#{?window_active, ←active,}" 2>/dev/null'
+
+selection=$(
+  build_list | fzf \
+    --delimiter='\t' \
+    --with-nth=2.. \
+    --height=100% \
+    --layout=reverse \
+    --border=rounded \
+    --border-label=' tmux sessions ' \
+    --header="$HEADER" \
+    --preview="$preview_cmd" \
+    --preview-window='right:34%:wrap' \
+    --expect=ctrl-x,ctrl-r
+)
+
+[[ -z "$selection" ]] && exit 0
+
+key=$(head -1 <<< "$selection")
+target=$(sed -n '2p' <<< "$selection" | cut -f1)
+[[ -z "$target" ]] && exit 0
+
+case "$key" in
+  ctrl-x)
+    # Refuse to kill the session you're sitting in — that would drop the popup's
+    # own client and is almost never what you meant.
+    if [[ -n "${TMUX:-}" && "$target" == "$(tmux display-message -p '#S')" ]]; then
+      tmux display-message "can't kill the session you're in — switch away first"
+    else
+      tmux kill-session -t "$target"
+      tmux display-message "killed session: $target"
+    fi
+    ;;
+  ctrl-r)
+    tmux command-prompt -I "$target" -p "rename '$target' to:" "rename-session -t '$target' '%%'"
+    ;;
+  *)
+    # Inside tmux you switch; outside you attach. Attaching from inside is
+    # refused by tmux, which is the whole reason these are different commands.
+    if [[ -n "${TMUX:-}" ]]; then
+      tmux switch-client -t "$target"
+    else
+      tmux attach -t "$target"
+    fi
+    ;;
+esac

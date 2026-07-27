@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+# tmux-stats — per-SESSION CPU, memory and Claude context usage.
+#
+# Why a cache file: tmux re-evaluates a choose-session format for every visible
+# row on a timer. Running `ps` once per row would mean N process-tree walks per
+# refresh. Instead one daemon walks the tree once every few seconds and writes a
+# tiny snapshot; the format just greps a line out of it.
+#
+# Cache format, one line per session, tab-separated:
+#   <session>\t<cpu%>\t<mem_mb>\t<ctx% or ->
+#
+# Context % comes from ~/.claude/statusline.sh, which writes its already-computed
+# percentage to ~/.cache/claude/ctx/<pane-id> on every render. Keying by pane id
+# means it stays exact with several agents in one repo or across worktrees —
+# guessing from the working directory would break there.
+#
+# Usage:
+#   tmux-stats                 write the cache once
+#   tmux-stats --daemon        loop forever (started automatically by tmux)
+#   tmux-stats --get <session> print one session's stats (used by the format)
+#   tmux-stats --show          human-readable dump of the cache
+
+set -uo pipefail
+
+CACHE_DIR="$HOME/.cache/tmux"
+CACHE="$CACHE_DIR/stats"
+CTX_DIR="$HOME/.cache/claude/ctx"
+LOCK="$CACHE_DIR/stats.lock"
+INTERVAL=3
+CTX_MAX_AGE=120          # ignore a context file older than this (agent has exited)
+
+mkdir -p "$CACHE_DIR" "$CTX_DIR" 2>/dev/null
+
+collect() {
+  tmux info >/dev/null 2>&1 || return 1
+
+  # Build "paneid=pct;paneid=pct" for context files that are still fresh.
+  local ctxmap="" now f age pid pct
+  now=$(date +%s)
+  for f in "$CTX_DIR"/*; do
+    [[ -f "$f" ]] || continue
+    age=$(( now - $(stat -f %m "$f" 2>/dev/null || echo 0) ))
+    [[ $age -gt $CTX_MAX_AGE ]] && continue
+    pid=$(basename "$f")
+    pct=$(cat "$f" 2>/dev/null)
+    [[ -n "$pct" ]] && ctxmap+="${pid}=${pct};"
+  done
+
+  local ps_snap panes
+  ps_snap=$(ps -Ao pid=,ppid=,pcpu=,rss=)
+  # pane_id looks like "%12"; strip the % so it matches the cache filename.
+  panes=$(tmux list-panes -a -F '#{session_name}|#{pane_pid}|#{pane_id}' | tr -d '%')
+
+  printf '%s\n%s' "$ps_snap" "$panes" | awk -F'|' -v ctxmap="$ctxmap" '
+    BEGIN {
+      n = split(ctxmap, pairs, ";")
+      for (i = 1; i <= n; i++) {
+        if (pairs[i] == "") continue
+        split(pairs[i], kv, "=")
+        ctx[kv[1]] = kv[2]
+      }
+    }
+
+    # ps block — no pipes in these lines
+    NF < 2 {
+      c = split($0, f, /[ \t]+/)
+      i = (f[1] == "" ? 2 : 1)
+      cpu[f[i]] = f[i+2]
+      mem[f[i]] = f[i+3]
+      kids[f[i+1]] = (f[i+1] in kids ? kids[f[i+1]] " " f[i] : f[i])
+      next
+    }
+
+    # pane block
+    {
+      sess = $1; ppid = $2; pid = $3
+
+      delete stack; sp = 0; stack[sp++] = ppid
+      tc = 0; tm = 0
+      while (sp > 0) {
+        p = stack[--sp]
+        if (!(p in cpu)) continue
+        tc += cpu[p]; tm += mem[p]
+        if (p in kids) {
+          k = split(kids[p], ch, " ")
+          for (j = 1; j <= k; j++) stack[sp++] = ch[j]
+        }
+      }
+
+      scpu[sess] += tc
+      smem[sess] += tm
+      # A session shows the highest context reading among its panes — that is
+      # the agent closest to running out of room, which is what you care about.
+      if (pid in ctx && (!(sess in sctx) || ctx[pid] + 0 > sctx[sess] + 0))
+        sctx[sess] = ctx[pid]
+      seen[sess] = 1
+    }
+
+    END {
+      for (s in seen)
+        printf "%s\t%.1f\t%.0f\t%s\n", s, scpu[s], smem[s]/1024, (s in sctx ? sctx[s] "%" : "-")
+    }
+  ' > "$CACHE.tmp" 2>/dev/null
+
+  # Atomic swap so a reader never sees a half-written file.
+  mv -f "$CACHE.tmp" "$CACHE" 2>/dev/null
+}
+
+case "${1:-}" in
+  --daemon)
+    # Single instance only: if the lock dir exists and its pid is alive, exit.
+    if mkdir "$LOCK" 2>/dev/null; then
+      trap 'rm -rf "$LOCK"' EXIT INT TERM
+      echo $$ > "$LOCK/pid"
+    else
+      if kill -0 "$(cat "$LOCK/pid" 2>/dev/null)" 2>/dev/null; then exit 0; fi
+      rm -rf "$LOCK"; mkdir "$LOCK" 2>/dev/null || exit 0
+      trap 'rm -rf "$LOCK"' EXIT INT TERM
+      echo $$ > "$LOCK/pid"
+    fi
+    while tmux info >/dev/null 2>&1; do
+      collect
+      command sleep "$INTERVAL"
+    done
+    ;;
+
+  --get)
+    # Printed inside a tmux format, so keep it short and never fail.
+    # Exact field match, not grep: an unanchored `grep -F "0<tab>"` would also
+    # match the line for a session named "10".
+    line=$(awk -F'\t' -v s="${2:-}" '$1 == s { print; exit }' "$CACHE" 2>/dev/null)
+    if [[ -z "$line" ]]; then printf '' ; exit 0; fi
+    IFS=$'\t' read -r _ c m x <<< "$line"
+    if [[ "$x" == "-" ]]; then
+      printf 'cpu %5s%%  mem %4sM' "$c" "$m"
+    else
+      printf 'cpu %5s%%  mem %4sM  ctx %s' "$c" "$m" "$x"
+    fi
+    ;;
+
+  --show)
+    collect
+    printf '%-24s %8s %8s %6s\n' SESSION CPU% MEM_MB CTX
+    printf '%s\n' "------------------------------------------------------"
+    sort "$CACHE" 2>/dev/null | while IFS=$'\t' read -r s c m x; do
+      printf '%-24s %8s %8s %6s\n' "$s" "$c" "$m" "$x"
+    done
+    ;;
+
+  *)
+    collect
+    ;;
+esac

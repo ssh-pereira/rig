@@ -1,0 +1,37 @@
+#!/bin/bash
+# run_onchange_after_ → re-runs whenever this script's rendered content changes.
+#
+# The Brewfile hash below is what makes that work: edit the Brewfile, the hash
+# changes, chezmoi re-runs this on the next `chezmoi update` on every machine.
+# Without the hash line it would only ever run once.
+#
+# Brewfile hash: {{ include "Brewfile" | sha256sum }}
+
+set -euo pipefail
+
+echo "▶ brew bundle"
+
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -x /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+
+command -v brew >/dev/null 2>&1 || { echo "  brew not found, skipping"; exit 0; }
+
+BREWFILE="{{ .chezmoi.sourceDir }}/Brewfile"
+[[ -f "$BREWFILE" ]] || { echo "  no Brewfile at $BREWFILE"; exit 0; }
+
+brew update
+
+# Mac App Store apps need an active sign-in. Don't fail the whole run over it.
+if ! mas account >/dev/null 2>&1; then
+  echo "  ⚠ not signed into the Mac App Store — 'mas' entries will be skipped."
+  echo "    Sign in to the App Store, then: brew bundle install --file=$BREWFILE"
+fi
+
+brew bundle install --file="$BREWFILE" --no-lock || {
+  echo "  ⚠ some entries failed. Re-run: brew bundle install --file=$BREWFILE"
+}
+
+echo "  done"

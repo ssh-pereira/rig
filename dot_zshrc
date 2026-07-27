@@ -1,0 +1,319 @@
+# ─────────────────────────────────────────────────────────────
+#  ~/.zshrc — Hugo
+# ─────────────────────────────────────────────────────────────
+
+# ---------- History ----------
+HISTFILE=~/.zsh_history
+HISTSIZE=100000
+SAVEHIST=100000
+setopt SHARE_HISTORY          # share history live across open shells
+setopt HIST_IGNORE_ALL_DUPS   # dedupe
+setopt HIST_REDUCE_BLANKS
+setopt HIST_VERIFY            # expand !! before running
+setopt EXTENDED_HISTORY       # record timestamps
+
+# ---------- Shell behaviour ----------
+setopt AUTO_CD                # `dev` instead of `cd dev`
+setopt AUTO_PUSHD             # every cd pushes to the dir stack
+setopt PUSHD_IGNORE_DUPS
+setopt INTERACTIVE_COMMENTS   # allow # comments when typing
+setopt NO_BEEP
+
+# ---------- Completions ----------
+fpath=(/opt/homebrew/share/zsh-completions $fpath)   # extra completion defs
+autoload -Uz compinit
+compinit -C                                       # -C = skip the daily security check (fast startup)
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'   # case-insensitive
+zstyle ':completion:*' menu select                          # arrow-key menu
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+# ---------- Keybindings ----------
+bindkey -e                                    # emacs mode (ctrl-a / ctrl-e / ctrl-w)
+bindkey '^[[A' history-search-backward        # Up  = search history by prefix
+bindkey '^[[B' history-search-forward         # Down
+bindkey '^[[1;3D' backward-word               # Option+Left
+bindkey '^[[1;3C' forward-word                # Option+Right
+
+# ---------- Editor ----------
+export EDITOR="zed --wait"
+export VISUAL="$EDITOR"
+export PAGER="less -FRX"
+
+# ═════════════════════════════════════════════════════════════
+#  TOOL INITIALISATION
+# ═════════════════════════════════════════════════════════════
+
+# starship — the prompt
+eval "$(starship init zsh)"
+
+# zoxide — smarter cd that learns your habits.  `z hill` jumps to ~/dev/hill
+eval "$(zoxide init zsh)"
+
+# atuin — searchable, synced shell history.  Ctrl-R is now a fuzzy TUI
+eval "$(atuin init zsh --disable-up-arrow)"
+
+# direnv — auto-loads/unloads .envrc per directory
+eval "$(direnv hook zsh)"
+
+# mise — per-project runtime versions (node, python, terraform…)
+eval "$(mise activate zsh)"
+
+# fzf — fuzzy finder.  Ctrl-T files, Alt-C cd, Ctrl-R (taken by atuin)
+source <(fzf --zsh)
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+export FZF_DEFAULT_OPTS='
+  --height 60% --layout=reverse --border=rounded --info=inline
+  --preview-window=right:55%:wrap
+'
+export FZF_CTRL_T_OPTS="--preview 'bat --style=numbers --color=always --line-range :300 {}'"
+export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {}'"
+
+# ═════════════════════════════════════════════════════════════
+#  ZSH PLUGINS
+# ═════════════════════════════════════════════════════════════
+
+# zsh-autosuggestions — the greyed-out inline completion from your history.
+# Start typing, it suggests the rest. → or End accepts it; Ctrl-→ accepts one word.
+source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#6c7086'
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+bindkey '^[[1;5C' forward-word          # Ctrl-Right: accept one word of the suggestion
+
+# NOTE: zsh-syntax-highlighting is sourced at the very BOTTOM of this file.
+# It has to load after everything else that binds keyboard widgets.
+
+# ═════════════════════════════════════════════════════════════
+#  ALIASES
+# ═════════════════════════════════════════════════════════════
+
+# --- modern replacements for the classics ---
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -l --icons --group-directories-first --git --time-style=relative'
+alias la='eza -la --icons --group-directories-first --git'
+alias lt='eza --tree --level=2 --icons'
+alias cat='bat --style=plain'
+alias catn='bat'                 # cat WITH line numbers/decorations
+alias find='fd'
+alias grep='rg'
+alias top='btop'
+alias du='du -h'
+alias df='df -h'
+alias help='tldr'
+
+# --- navigation ---
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias dev='cd ~/dev'
+alias hill='cd ~/dev/hill'
+alias forge='cd ~/dev/forge'
+
+# --- git ---
+alias g='git'
+alias gs='git status -sb'
+alias ga='git add'
+alias gaa='git add -A'
+alias gc='git commit'
+alias gcm='git commit -m'
+alias gca='git commit --amend --no-edit'
+alias gco='git checkout'
+alias gcb='git checkout -b'
+alias gd='git diff'
+alias gds='git diff --staged'
+alias gl='git log --oneline --graph --decorate -20'
+alias gp='git push'
+alias gpl='git pull --rebase'
+alias gb='git branch'
+alias lg='lazygit'               # the git TUI — live here
+alias gwl='git worktree list'
+alias gwa='git worktree add'
+alias gwr='git worktree remove'
+
+# --- github ---
+alias ghd='gh dash'              # PR/issue dashboard TUI
+alias ghpr='gh pr create --web'
+alias ghv='gh pr view --web'
+
+# --- kubernetes ---
+alias k='kubectl'
+alias kx='kubectx'               # switch cluster
+alias kn='kubens'                # switch namespace
+alias kg='kubectl get'
+alias kd='kubectl describe'
+alias kl='kubectl logs -f'
+alias kaf='kubectl apply -f'
+alias kdel='kubectl delete'
+alias kgp='kubectl get pods -o wide'
+alias kgs='kubectl get svc'
+alias kga='kubectl get all -A'
+alias kcx='kubectl config get-contexts'
+
+# --- terraform / terragrunt ---
+alias tf='terraform'
+alias tfi='terraform init'
+alias tfp='terraform plan'
+alias tfa='terraform apply'
+alias tfd='terraform destroy'
+alias tff='terraform fmt -recursive'
+alias tfv='terraform validate'
+alias tg='terragrunt'
+
+# --- docker ---
+alias d='docker'
+alias dc='docker compose'
+alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
+alias lzd='lazydocker'
+alias dprune='docker system prune -af --volumes'
+
+# --- networking ---
+alias ports='lsof -iTCP -sTCP:LISTEN -n -P'
+alias myip='curl -s https://ifconfig.me && echo'
+alias localip="ipconfig getifaddr en0"
+alias dig='doggo'                # modern DNS client
+alias ping='gping'               # ping with a live graph
+alias http='xh'                  # modern httpie/curl
+
+# --- tmux ---
+alias t='tmux'
+alias ta='tmux attach -t'
+alias tls='tmux list-sessions'
+alias tn='tmux new -s'
+alias tk='tmux kill-session -t'
+alias tcpu='tmux-cpu'          # CPU/mem per pane, one snapshot
+alias tcpuw='tmux-cpu -w'      # ...live, refreshing every 2s
+
+# --- ai token usage (ccusage reads Claude Code AND Codex) ---
+alias usage='bunx ccusage@latest daily'
+alias usagew='bunx ccusage@latest weekly'
+alias usagem='bunx ccusage@latest monthly'
+alias usages='bunx ccusage@latest session'
+alias usagelive='bunx ccusage@latest blocks --live'   # live burn-rate monitor
+alias usagecc='bunx ccusage@latest claude'
+alias usagecx='bunx ccusage@latest codex'
+
+# --- ai agents ---
+alias cc='claude'
+alias ccc='claude --continue'
+alias ccr='claude --resume'
+alias cx='codex'
+
+# --- misc ---
+alias cheat='glow -p ~/.rig/cheatsheet.md'
+alias rigdoc='glow -p ~/.rig/README.md'
+alias reload='source ~/.zshrc && echo "zshrc reloaded"'
+alias zshrc='$EDITOR ~/.zshrc'
+alias tmuxrc='$EDITOR ~/.tmux.conf'
+alias path='echo $PATH | tr ":" "\n"'
+
+# ═════════════════════════════════════════════════════════════
+#  FUNCTIONS
+# ═════════════════════════════════════════════════════════════
+
+# learn — capability guides per tool: "what can this do that I don't know about?"
+#   learn tmux     open that tool's guide
+#   learn          fuzzy-pick one
+learn() {
+  local dir="$HOME/.rig/learn" f
+  if [[ -n "$1" ]]; then
+    f="$dir/$1.md"
+    [[ -f "$f" ]] || { echo "no guide for '$1'. available:"; ls "$dir" | sed 's/\.md$//;s/^/  /'; return 1; }
+  else
+    f=$(fd -e md . "$dir" | fzf --preview 'glow -s dark {}' --preview-window=right:65%)
+    [[ -z "$f" ]] && return 0
+  fi
+  glow -p "$f"
+}
+
+# rig — manage this machine's config repo
+#   rig            apply pending changes
+#   rig edit       open the source repo in the editor
+#   rig update     git pull + apply (run this on every machine)
+#   rig diff       what would change
+#   rig add <f>    start tracking a file
+rig() {
+  case "${1:-apply}" in
+    apply)  chezmoi apply -v ;;
+    edit)   ${EDITOR:-zed} "$(chezmoi source-path)" ;;
+    update) chezmoi update -v ;;
+    diff)   chezmoi diff ;;
+    add)    shift; chezmoi add "$@" && echo "tracked. commit in $(chezmoi source-path)" ;;
+    cd)     cd "$(chezmoi source-path)" ;;
+    *)      chezmoi "$@" ;;
+  esac
+}
+
+# mkcd — make a directory and cd into it
+mkcd() { mkdir -p "$1" && cd "$1"; }
+
+# fcd — fuzzy-pick a project under ~/dev and cd there
+fcd() {
+  local dir
+  dir=$(fd --type d --max-depth 3 . ~/dev | fzf --preview 'eza --tree --level=2 --color=always {}') \
+    && cd "$dir"
+}
+
+# fkill — fuzzy-pick a process and kill it
+fkill() {
+  local pid
+  pid=$(ps -ef | sed 1d | fzf -m --header='[kill:process]' | awk '{print $2}')
+  [[ -n "$pid" ]] && echo "$pid" | xargs kill -${1:-9}
+}
+
+# gwt — create a git worktree + branch in ../<repo>-worktrees/<name>, then cd there.
+#       This is the primitive for running parallel AI agents without conflicts.
+gwt() {
+  [[ -z "$1" ]] && { echo "usage: gwt <branch-name>"; return 1; }
+  local root name dir
+  root=$(git rev-parse --show-toplevel) || return 1
+  name=$(basename "$root")
+  dir="$(dirname "$root")/${name}-worktrees/$1"
+  git worktree add -b "$1" "$dir" && cd "$dir"
+}
+
+# gwtrm — remove a worktree and delete its branch
+gwtrm() {
+  [[ -z "$1" ]] && { echo "usage: gwtrm <branch-name>"; return 1; }
+  local root name dir
+  root=$(git rev-parse --show-toplevel) || return 1
+  name=$(basename "$root")
+  dir="$(dirname "$root")/${name}-worktrees/$1"
+  git worktree remove "$dir" --force && git branch -D "$1"
+}
+
+# extract — unpack any archive
+extract() {
+  case "$1" in
+    *.tar.bz2) tar xjf "$1" ;;  *.tar.gz)  tar xzf "$1" ;;
+    *.tar.xz)  tar xJf "$1" ;;  *.tar)     tar xf  "$1" ;;
+    *.bz2)     bunzip2 "$1" ;;  *.gz)      gunzip  "$1" ;;
+    *.zip)     unzip   "$1" ;;  *.7z)      7z x    "$1" ;;
+    *) echo "don't know how to extract '$1'" ;;
+  esac
+}
+
+# y — yazi file manager that cds the shell to wherever you exited
+y() {
+  local tmp cwd
+  tmp="$(mktemp -t yazi-cwd.XXXXXX)"
+  yazi "$@" --cwd-file="$tmp"
+  cwd="$(cat -- "$tmp")"
+  [[ -n "$cwd" && "$cwd" != "$PWD" ]] && builtin cd -- "$cwd"
+  rm -f -- "$tmp"
+}
+
+# ═════════════════════════════════════════════════════════════
+#  PATH
+# ═════════════════════════════════════════════════════════════
+export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"
+export BUN_INSTALL="$HOME/.bun"
+[ -s "$BUN_INSTALL/_bun" ] && source "$BUN_INSTALL/_bun"
+
+# ═════════════════════════════════════════════════════════════
+#  MUST BE LAST
+# ═════════════════════════════════════════════════════════════
+# zsh-syntax-highlighting colours the command line as you type: green = a real
+# command, red = doesn't exist. It wraps every keyboard widget, so anything that
+# binds widgets must load BEFORE it. Keep this at the bottom of the file.
+source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 2>/dev/null

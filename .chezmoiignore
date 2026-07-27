@@ -1,0 +1,86 @@
+# Files chezmoi must never manage, even if `chezmoi add` is run on them by
+# mistake. This is the safety net for secrets and machine-local state.
+#
+# Paths are relative to the home directory and use the TARGET name
+# (.claude/..., not dot_claude/...).
+
+# ═══════════════════════════════════════════════════════════════
+#  Repo-level files — they live in the repo, NOT in $HOME
+#  Without these, chezmoi would create ~/Brewfile and ~/README.md.
+# ═══════════════════════════════════════════════════════════════
+Brewfile
+README.md
+LICENSE
+
+# ═══════════════════════════════════════════════════════════════
+#  Secrets and auth state — NEVER commit these
+# ═══════════════════════════════════════════════════════════════
+.claude.json                  # MCP server auth tokens + per-project state
+.claude.json.backup
+.claude/.credentials.json
+.codex/auth.json
+.ssh/**
+.gnupg/**
+.gnupg_pre_2.1/**
+.aws/**
+.kube/config                  # cluster credentials
+.config/gcloud/**
+.config/op/**                 # 1Password CLI state
+.netrc
+**/*.pem
+**/*.key
+**/.env
+**/.env.*
+
+# Employer-specific git identity — belongs beside the employer's code,
+# not in a personal repo. Create it per machine.
+.gitconfig-hill
+
+# ═══════════════════════════════════════════════════════════════
+#  Machine-local state, caches, history
+# ═══════════════════════════════════════════════════════════════
+.claude/history.jsonl
+.claude/projects/**
+.claude/sessions/**
+.claude/session-env/**
+.claude/shell-snapshots/**
+.claude/file-history/**
+.claude/paste-cache/**
+.claude/telemetry/**
+.claude/tasks/**
+.claude/backups/**
+.claude/cache/**
+.claude/downloads/**
+.claude/plugins/**
+.claude/statsig/**
+.claude/.last-cleanup
+.claude/policy-limits.json
+.claude/remote-settings.json
+.claude/mcp-needs-auth-cache.json
+.claude/settings.local.json
+
+.cache/**
+.local/state/**
+.local/share/chezmoi/**
+.zsh_history
+.zsh_sessions/**
+.zcompdump*
+.viminfo
+.DS_Store
+**/.DS_Store
+
+# Tool-managed directories — these rewrite themselves, tracking them causes churn
+.tmux/plugins/**              # installed by the tmux-plugins script instead
+.config/zed/themes/**
+.config/zed/extensions/**
+.config/raycast/**
+.orbstack/**
+.docker/**
+.npm/**
+.bun/install/**
+.expo/**
+.swiftpm/**
+
+# Anything ending in .local.json / .local.toml is per-machine by convention
+**/*.local.json
+**/*.local.toml

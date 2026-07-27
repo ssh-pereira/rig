@@ -1,0 +1,210 @@
+// Zed settings — Hugo
+//
+// Docs: https://zed.dev/docs/configuring-zed
+// See every default: cmd-shift-p → "zed: open default settings"
+{
+  // ───────────────────────────────────────────────
+  //  Appearance
+  // ───────────────────────────────────────────────
+  "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "One Dark"
+  },
+  "icon_theme": {
+    "mode": "system",
+    "light": "Zed (Default)",
+    "dark": "Zed (Default)"
+  },
+
+  // CHANGED: was ".SystemUIFont", a proportional font — code and markdown
+  // tables don't align in it. Geist Mono is already installed on this machine.
+  // Revert this one line if you preferred the old look.
+  "buffer_font_family": "Geist Mono",
+  "buffer_font_size": 12.0,
+  "buffer_font_weight": 400.0,
+  "buffer_line_height": "standard",
+
+  "ui_font_family": "Geist",
+  "ui_font_size": 16,
+
+  // ───────────────────────────────────────────────
+  //  Editor
+  // ───────────────────────────────────────────────
+  "soft_wrap": "editor_width",
+  "tab_size": 2,
+  "show_whitespaces": "selection",
+  "relative_line_numbers": false,
+  "cursor_blink": false,
+  "current_line_highlight": "line",
+  "scroll_beyond_last_line": "one_page",
+  "remove_trailing_whitespace_on_save": true,
+  "ensure_final_newline_on_save": true,
+  "format_on_save": "on",
+
+  // Wrap guides at 80/120 as a visual hint, not enforcement
+  "show_wrap_guides": true,
+  "wrap_guides": [80, 120],
+
+  "inlay_hints": {
+    "enabled": true,
+    "show_type_hints": true,
+    "show_parameter_hints": true,
+    "show_other_hints": true
+  },
+
+  // ───────────────────────────────────────────────
+  //  Panels & tabs
+  // ───────────────────────────────────────────────
+  "tab_bar": {
+    "show": true,
+    "show_nav_history_buttons": false
+  },
+  "tabs": {
+    "file_icons": true,
+    "git_status": true,
+    "close_position": "right"
+  },
+  // Single-click in the file finder opens an italic "preview" tab that gets
+  // replaced by the next file — stops 40 tabs accumulating while you explore.
+  "preview_tabs": {
+    "enabled": true,
+    "enable_preview_from_file_finder": true,
+    "enable_preview_from_code_navigation": true
+  },
+  "project_panel": {
+    "dock": "right",
+    "git_status": true,
+    "auto_reveal_entries": true,
+    "indent_size": 16
+  },
+  "outline_panel": {
+    "dock": "right"
+  },
+  "scrollbar": {
+    "show": "auto",
+    "git_diff": true,
+    "search_results": true,
+    "diagnostics": "all"
+  },
+
+  // ───────────────────────────────────────────────
+  //  Git
+  // ───────────────────────────────────────────────
+  "git": {
+    "git_gutter": "tracked_files",
+    "inline_blame": {
+      "enabled": true,
+      "delay_ms": 600,
+      "show_commit_summary": true
+    }
+  },
+
+  // ───────────────────────────────────────────────
+  //  Terminal
+  // ───────────────────────────────────────────────
+  // Ghostty + tmux is the real terminal; this one is for quick in-editor commands.
+  "terminal": {
+    "font_family": "Geist Mono",
+    "font_size": 12,
+    "line_height": "standard",
+    "copy_on_select": true,
+    "blinking": "off",
+    "working_directory": "current_project_directory",
+    "toolbar": { "breadcrumbs": false }
+  },
+
+  // ───────────────────────────────────────────────
+  //  Search & indexing
+  // ───────────────────────────────────────────────
+  // Keep heavy directories out of search, the file finder, and the watcher.
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/node_modules",
+    "**/.turbo",
+    "**/.next",
+    "**/dist",
+    "**/build",
+    "**/.terraform",
+    "**/target",
+    "**/.venv",
+    "**/__pycache__",
+    "**/.DS_Store",
+    "**/DerivedData",
+    "**/.expo"
+  ],
+  "search": {
+    "whole_word": false,
+    "case_sensitive": false,
+    "include_ignored": false
+  },
+
+  // ───────────────────────────────────────────────
+  //  Extensions (auto-installed on launch)
+  // ───────────────────────────────────────────────
+  "auto_install_extensions": {
+    "biome": true,
+    "terraform": true,
+    "dockerfile": true,
+    "toml": true,
+    "graphql": true,
+    "sql": true,
+    "swift": true,
+    "ruff": true
+  },
+
+  // ───────────────────────────────────────────────
+  //  Per-language
+  // ───────────────────────────────────────────────
+  "languages": {
+    // Markdown: never auto-format. A formatter reflows tables and breaks
+    // hand-tuned line breaks. Wrap to the window instead of a hard column.
+    "Markdown": {
+      "soft_wrap": "editor_width",
+      "format_on_save": "off",
+      "show_wrap_guides": false,
+      "remove_trailing_whitespace_on_save": false
+    },
+    "JavaScript": { "formatter": { "language_server": { "name": "biome" } } },
+    "TypeScript": { "formatter": { "language_server": { "name": "biome" } } },
+    "TSX": { "formatter": { "language_server": { "name": "biome" } } },
+    "JSON": { "formatter": { "language_server": { "name": "biome" } } },
+    "JSONC": { "formatter": { "language_server": { "name": "biome" } } },
+    "Python": {
+      "language_servers": ["ruff", "!pyright"],
+      "formatter": { "language_server": { "name": "ruff" } }
+    },
+    "Terraform": { "tab_size": 2 },
+    "HCL": { "tab_size": 2 },
+    "YAML": { "tab_size": 2 },
+    "Go": { "tab_size": 4, "hard_tabs": true },
+    "Rust": { "tab_size": 4 },
+    "Swift": { "tab_size": 4 }
+  },
+
+  // Files Zed can't infer from the extension alone
+  "file_types": {
+    "JSONC": [
+      "**/.claude/settings.json",
+      "**/.claude/settings.local.json",
+      "**/.vscode/*.json",
+      "tsconfig*.json",
+      "biome.json"
+    ],
+    "YAML": ["**/.github/workflows/*.yml"],
+    "Dockerfile": ["Dockerfile*"]
+  },
+
+  // ───────────────────────────────────────────────
+  //  Misc
+  // ───────────────────────────────────────────────
+  "vim_mode": false,
+  "autosave": { "after_delay": { "milliseconds": 2000 } },
+  "restore_on_startup": "last_session",
+  "when_closing_with_no_tabs": "keep_window_open",
+  "use_smartcase_search": true,
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false
+  }
+}
