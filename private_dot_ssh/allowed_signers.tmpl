@@ -1,5 +1,5 @@
 {{- /* Lets `git log --show-signature` verify your own commits locally. */ -}}
 {{- $pub := joinPath .chezmoi.homeDir ".ssh/github_signing.pub" -}}
 {{- if stat $pub }}
-{{ .personalEmail }} {{ (splitList " " (include $pub | trim)) | first }} {{ (splitList " " (include $pub | trim)) | rest | first }}
+{{ .gitEmail }} {{ (splitList " " (include $pub | trim)) | first }} {{ (splitList " " (include $pub | trim)) | rest | first }}
 {{- end }}

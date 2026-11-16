@@ -1,8 +1,8 @@
 {{/*
   Templated so one file works on every machine.
-  Identity comes from chezmoi data: `personalEmail` is the default author on
-  every machine; on work machines repos under ~/dev/hill switch to the work
-  identity through the includeIf. Set these at `chezmoi init` time.
+  Author email is `gitEmail` from .chezmoidata.toml (the GitHub noreply
+  address) on every machine. Work machines also include ~/.gitconfig-hill for
+  repos under ~/dev/hill; a chezmoi script keeps its user.email on noreply too.
 
   Work machines additionally include ~/.gitconfig-hill for repos under ~/dev/hill
   — that file is NOT tracked here, because it holds employer-specific config that
@@ -10,9 +10,8 @@
 */ -}}
 [user]
 	name = {{ .name }}
-	# Personal identity by default on every machine. Work repos under ~/dev/hill
-	# get the work identity via the includeIf below (work machines only).
-	email = {{ .personalEmail }}
+	# GitHub noreply address everywhere (see .chezmoidata.toml for why).
+	email = {{ .gitEmail }}
 	# Dedicated SSH signing key (separate from the auth key). Loaded into the
 	# macOS ssh-agent at login, so signing never prompts — agents can commit freely.
 	signingkey = {{ .chezmoi.homeDir }}/.ssh/github_signing.pub
