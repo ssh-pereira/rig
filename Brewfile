@@ -49,6 +49,7 @@ brew "tealdeer"                 # `tldr` — examples instead of man pages
 # ═══════════════════════════════════════════════════════════════
 #  Git
 # ═══════════════════════════════════════════════════════════════
+brew "git"                      # newer than Apple's, gets security fixes faster
 brew "gh"                       # GitHub CLI
 brew "lazygit"                  # git TUI — hunk staging, interactive rebase
 brew "git-delta"                # syntax-highlighted diffs
@@ -98,6 +99,7 @@ brew "teamookla/speedtest/speedtest"
 brew "bun"                      # JS runtime + package manager
 brew "node@24"
 brew "uv"                       # Python packaging, ~50x faster than pip
+brew "shfmt"                    # shell formatter (Claude format hook)
 
 # ═══════════════════════════════════════════════════════════════
 #  System
@@ -132,14 +134,12 @@ brew "opencode"
 #  Dev tooling
 # ═══════════════════════════════════════════════════════════════
 cask "orbstack"                 # fast Docker/Linux VM for macOS
-cask "docker-desktop"
 cask "postman"
 cask "tableplus"
 cask "dbeaver-community"
 cask "ngrok"
 cask "gcloud-cli"
 cask "terraform-linters/tap/tflint"
-cask "gpg-suite"
 
 # ═══════════════════════════════════════════════════════════════
 #  Productivity

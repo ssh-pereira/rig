@@ -1,0 +1,28 @@
+# ~/.ssh/config — managed by rig (chezmoi) — edit private_dot_ssh/private_config in the repo
+# Keys: github_auth (push/pull) and github_signing (commit signatures only).
+# Both are passphrase-encrypted; the passphrases live in the macOS login Keychain
+# and the keys are loaded into the system ssh-agent at login
+# (~/Library/LaunchAgents/local.rig.ssh-add.plist), so agents never get prompted.
+
+Include ~/.orbstack/ssh/config
+
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/github_auth
+  IdentitiesOnly yes
+  AddKeysToAgent yes
+  UseKeychain yes
+
+Host *
+  # never offer every key in the agent to every server
+  IdentitiesOnly yes
+  # never forward the agent: a compromised remote host could use your keys
+  ForwardAgent no
+  ForwardX11 no
+  HashKnownHosts yes
+  UpdateHostKeys yes
+  StrictHostKeyChecking ask
+  VerifyHostKeyDNS no
+  ServerAliveInterval 30
+  ServerAliveCountMax 4

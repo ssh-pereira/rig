@@ -1,8 +1,8 @@
 {{/*
   Templated so one file works on every machine.
-  Identity comes from chezmoi data: `email` is the default for this machine,
-  `personalEmail` is used when `machine` is "work" so personal repos still get
-  the right author. Set these at `chezmoi init` time.
+  Identity comes from chezmoi data: `personalEmail` is the default author on
+  every machine; on work machines repos under ~/dev/hill switch to the work
+  identity through the includeIf. Set these at `chezmoi init` time.
 
   Work machines additionally include ~/.gitconfig-hill for repos under ~/dev/hill
   — that file is NOT tracked here, because it holds employer-specific config that
@@ -10,24 +10,43 @@
 */ -}}
 [user]
 	name = {{ .name }}
-{{- if eq .machine "work" }}
+	# Personal identity by default on every machine. Work repos under ~/dev/hill
+	# get the work identity via the includeIf below (work machines only).
 	email = {{ .personalEmail }}
-{{- else }}
-	email = {{ .email }}
-{{- end }}
+	# Dedicated SSH signing key (separate from the auth key). Loaded into the
+	# macOS ssh-agent at login, so signing never prompts — agents can commit freely.
+	signingkey = {{ .chezmoi.homeDir }}/.ssh/github_signing.pub
 
 [core]
 	excludesfile = {{ .chezmoi.homeDir }}/.gitignore_global
 	pager = delta
 
+# ---------- signing: every commit and tag, via SSH (no GPG) ----------
+[gpg]
+	format = ssh
+[gpg "ssh"]
+	allowedSignersFile = {{ .chezmoi.homeDir }}/.ssh/allowed_signers
 [commit]
-	gpgsign = false
+	gpgsign = true
 [tag]
-	gpgsign = false
+	gpgsign = true
 
-# Always use SSH for GitHub, even when something hands us an https URL
+# ---------- integrity: reject corrupt or malicious objects on fetch ----------
+[transfer]
+	fsckObjects = true
+[fetch "fsck"]
+	zeroPaddedFilemode = warn
+[receive "fsck"]
+	zeroPaddedFilemode = warn
+[protocol "file"]
+	allow = user
+
+# Pushes to GitHub always go over SSH (your key), even from an https remote.
+# Fetches of https URLs stay https, so Homebrew, plugin managers and package
+# tools keep working anonymously. Clone private repos with the git@ URL
+# (gh is set to git_protocol=ssh, so `gh repo clone` does that already).
 [url "git@github.com:"]
-	insteadOf = https://github.com/
+	pushInsteadOf = https://github.com/
 
 {{ if eq .machine "work" -}}
 # Work identity, auto-applied to anything under ~/dev/hill.

@@ -9,8 +9,11 @@
 */ -}}
 {{- $machine := promptStringOnce . "machine" "Machine type (work/personal)" "personal" -}}
 {{- $name := promptStringOnce . "name" "Full name for git commits" "Hugo Pereira" -}}
-{{- $email := promptStringOnce . "email" "Work email" "hugo.pereira@hill.com" -}}
-{{- $personalEmail := promptStringOnce . "personalEmail" "Personal email" "hugop868@gmail.com" -}}
+{{- $personalEmail := promptStringOnce . "personalEmail" "Personal email (default git author)" "hugop868@gmail.com" -}}
+{{- $email := "" -}}
+{{- if eq $machine "work" -}}
+{{-   $email = promptStringOnce . "email" "Work email (repos under ~/dev/hill)" "hugo.pereira@hill.com" -}}
+{{- end -}}
 
 # The source of truth lives in a normal dev folder instead of the default
 # ~/.local/share/chezmoi, so it's easy to browse, grep and edit directly.

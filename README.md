@@ -135,3 +135,28 @@ The test before adding something: *would this be wrong on a different machine?*
 ## Related
 
 Work machines also run [hillmarkets/provisioner-macos](https://github.com/hillmarkets/provisioner-macos) for the company baseline — org apps, licensed fonts, internal tooling. Two commands, separate ownership: they update theirs, I update mine.
+
+---
+
+## Security model
+
+| Area | Choice | Why |
+|---|---|---|
+| GitHub auth | `~/.ssh/github_auth` (ed25519), GitHub-only via `IdentitiesOnly` | never offered to other hosts |
+| Commit signing | separate `~/.ssh/github_signing`, `commit.gpgsign = true` | every commit Verified; revoke independently of push access |
+| Key storage | random passphrase → macOS login Keychain, never on disk | a copied key file is useless |
+| Unattended use | LaunchAgent `local.rig.ssh-add` loads keys into the system ssh-agent at login | agents commit/push without prompts, but can't extract the keys |
+| Host keys | GitHub's keys pinned in `known_hosts` from `api.github.com/meta` | no trust-on-first-use |
+| SSH client | `ForwardAgent no`, `HashKnownHosts`, `StrictHostKeyChecking ask` | |
+| git | `transfer.fsckObjects`, `protocol.file.allow = user` | reject malformed objects, block file:// submodule tricks |
+| Homebrew | analytics off, `HOMEBREW_NO_INSECURE_REDIRECT` | |
+| zsh | `compinit` audits completion dirs daily instead of never | catches world-writable fpath injection |
+
+Upgrade path if you want keys that physically can't leave the machine: [Secretive](https://github.com/maxgoedjen/secretive) stores them in the Secure Enclave (`brew install --cask secretive`).
+
+New machine: add both public keys to GitHub → Settings → SSH and GPG keys (one as **Authentication**, one as **Signing**):
+
+```bash
+gh ssh-key add ~/.ssh/github_auth.pub    --type authentication --title "$(scutil --get LocalHostName) auth"
+gh ssh-key add ~/.ssh/github_signing.pub --type signing        --title "$(scutil --get LocalHostName) signing"
+```
