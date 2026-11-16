@@ -9,7 +9,7 @@
 */ -}}
 {{- $machine := promptStringOnce . "machine" "Machine type (work/personal)" "personal" -}}
 {{- $name := promptStringOnce . "name" "Full name for git commits" "Hugo Pereira" -}}
-{{- $personalEmail := promptStringOnce . "personalEmail" "Personal email (default git author)" "hugop868@gmail.com" -}}
+{{- $personalEmail := promptStringOnce . "personalEmail" "Personal git email (GitHub noreply keeps your real address out of public commits)" "82890773+ssh-pereira@users.noreply.github.com" -}}
 {{- $email := "" -}}
 {{- if eq $machine "work" -}}
 {{-   $email = promptStringOnce . "email" "Work email (repos under ~/dev/hill)" "hugo.pereira@hill.com" -}}
