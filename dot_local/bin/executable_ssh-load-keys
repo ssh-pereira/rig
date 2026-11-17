@@ -1,0 +1,27 @@
+#!/bin/bash
+# ssh-load-keys — load every ~/.ssh/github_* key into the macOS ssh-agent,
+# taking the passphrases from the login Keychain (no prompt).
+#
+# Run at login by ~/Library/LaunchAgents/local.rig.ssh-add.plist. At login
+# launchd can start this before the login Keychain is unlocked or the agent
+# socket is ready; a single `ssh-add --apple-load-keychain` then fails and the
+# signing key never loads, so every signed commit fails until it's loaded by
+# hand. Hence the retry loop.
+#
+# Also safe to run by hand any time: `ssh-load-keys`.
+
+want=$(ls "$HOME"/.ssh/github_*.pub 2>/dev/null | wc -l | tr -d ' ')
+[[ "$want" -eq 0 ]] && exit 0
+
+for _ in $(seq 1 30); do
+  /usr/bin/ssh-add --apple-load-keychain -q 2>/dev/null
+  have=$(/usr/bin/ssh-add -l 2>/dev/null | grep -c ' github_' || true)
+  if [[ "$have" -ge "$want" ]]; then
+    echo "$(date '+%F %T') loaded $have/$want keys"
+    exit 0
+  fi
+  sleep 2
+done
+
+echo "$(date '+%F %T') gave up: $have/$want keys loaded" >&2
+exit 1

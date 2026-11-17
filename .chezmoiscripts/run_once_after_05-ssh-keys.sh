@@ -28,4 +28,5 @@ for k in github_auth github_signing; do
   echo "  created $k — add ~/.ssh/$k.pub to GitHub"
 done
 
+launchctl bootout "gui/$(id -u)/local.rig.ssh-add" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/local.rig.ssh-add.plist" 2>/dev/null || true
