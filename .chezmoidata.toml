@@ -1,0 +1,9 @@
+# Static data shared by every machine (read on every apply, unlike the
+# .chezmoi.toml.tmpl prompts, which only run at `chezmoi init`).
+
+# Git author for EVERY repo on EVERY machine, personal and work alike.
+# GitHub has "Keep my email private" + "Block command line pushes that expose
+# my email" on, so a commit authored with a real address (gmail or hill.com)
+# would be rejected at push time. The noreply address still links every
+# commit to the ssh-pereira account and verifies with the SSH signing key.
+gitEmail = "82890773+ssh-pereira@users.noreply.github.com"

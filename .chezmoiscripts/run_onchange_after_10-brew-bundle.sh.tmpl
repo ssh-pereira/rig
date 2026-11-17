@@ -28,9 +28,11 @@ brew update
 if ! mas account >/dev/null 2>&1; then
   echo "  ⚠ not signed into the Mac App Store — 'mas' entries will be skipped."
   echo "    Sign in to the App Store, then: brew bundle install --file=$BREWFILE"
+  # skip every mas entry instead of letting mas hang on a sign-in prompt
+  export HOMEBREW_BUNDLE_MAS_SKIP="$(grep -oE "id: [0-9]+" "$BREWFILE" | awk '{print $2}' | tr '\n' ' ')"
 fi
 
-brew bundle install --file="$BREWFILE" --no-lock || {
+brew bundle install --file="$BREWFILE" || {
   echo "  ⚠ some entries failed. Re-run: brew bundle install --file=$BREWFILE"
 }
 

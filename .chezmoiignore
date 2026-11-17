@@ -19,7 +19,9 @@ LICENSE
 .claude.json.backup
 .claude/.credentials.json
 .codex/auth.json
-.ssh/**
+.ssh/*
+!.ssh/config              # tracked: no secrets
+!.ssh/allowed_signers     # tracked: public key only
 .gnupg/**
 .gnupg_pre_2.1/**
 .aws/**

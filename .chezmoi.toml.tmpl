@@ -2,15 +2,12 @@
   Runs on `chezmoi init`, once per machine. The answers land in
   ~/.config/chezmoi/chezmoi.toml and drive the templates (currently .gitconfig).
 
-  `machine` controls whether work-specific config is emitted — on a work Mac the
-  default git identity stays personal, and repos under ~/dev/hill pick up the
-  work identity through an includeIf. That way a personal side project committed
-  from the work laptop is never authored with a work email by accident.
+  `machine` controls whether work-specific config is emitted (the includeIf for
+  ~/dev/hill). The git author email is NOT prompted: it is `gitEmail` in
+  .chezmoidata.toml, the GitHub noreply address, on every machine.
 */ -}}
 {{- $machine := promptStringOnce . "machine" "Machine type (work/personal)" "personal" -}}
 {{- $name := promptStringOnce . "name" "Full name for git commits" "Hugo Pereira" -}}
-{{- $email := promptStringOnce . "email" "Work email" "hugo.pereira@hill.com" -}}
-{{- $personalEmail := promptStringOnce . "personalEmail" "Personal email" "hugop868@gmail.com" -}}
 
 # The source of truth lives in a normal dev folder instead of the default
 # ~/.local/share/chezmoi, so it's easy to browse, grep and edit directly.
@@ -19,5 +16,3 @@ sourceDir = {{ printf "%s/dev/hugo/rig" .chezmoi.homeDir | quote }}
 [data]
     machine = {{ $machine | quote }}
     name = {{ $name | quote }}
-    email = {{ $email | quote }}
-    personalEmail = {{ $personalEmail | quote }}

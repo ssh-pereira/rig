@@ -1,0 +1,20 @@
+#!/bin/bash
+# Keeps the work git identity (~/.gitconfig-hill, untracked, per machine) on the
+# GitHub noreply address. GitHub blocks pushes whose latest commit exposes a
+# private email, and hugo.pereira@hill.com is private, so authoring with it
+# would get every push to hillmarkets repos rejected.
+#
+# Only user.email is touched; anything else in that file is left alone.
+# Re-runs when the address changes: {{ .gitEmail }}
+set -euo pipefail
+
+f="$HOME/.gitconfig-hill"
+[[ -f "$f" ]] || exit 0
+
+want="{{ .gitEmail }}"
+cur=$(git config -f "$f" --get user.email 2>/dev/null || true)
+[[ "$cur" == "$want" ]] && exit 0
+
+cp -p "$f" "$f.bak.$(date +%Y%m%d%H%M%S)"
+git config -f "$f" user.email "$want"
+echo "▶ ~/.gitconfig-hill: user.email ${cur:-<unset>} → $want (backup saved beside it)"

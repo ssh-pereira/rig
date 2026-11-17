@@ -49,6 +49,7 @@ brew "tealdeer"                 # `tldr` — examples instead of man pages
 # ═══════════════════════════════════════════════════════════════
 #  Git
 # ═══════════════════════════════════════════════════════════════
+brew "git"                      # newer than Apple's, gets security fixes faster
 brew "gh"                       # GitHub CLI
 brew "lazygit"                  # git TUI — hunk staging, interactive rebase
 brew "git-delta"                # syntax-highlighted diffs
@@ -98,6 +99,7 @@ brew "teamookla/speedtest/speedtest"
 brew "bun"                      # JS runtime + package manager
 brew "node@24"
 brew "uv"                       # Python packaging, ~50x faster than pip
+brew "shfmt"                    # shell formatter (Claude format hook)
 
 # ═══════════════════════════════════════════════════════════════
 #  System
@@ -132,14 +134,12 @@ brew "opencode"
 #  Dev tooling
 # ═══════════════════════════════════════════════════════════════
 cask "orbstack"                 # fast Docker/Linux VM for macOS
-cask "docker-desktop"
 cask "postman"
 cask "tableplus"
 cask "dbeaver-community"
 cask "ngrok"
 cask "gcloud-cli"
 cask "terraform-linters/tap/tflint"
-cask "gpg-suite"
 
 # ═══════════════════════════════════════════════════════════════
 #  Productivity
@@ -184,8 +184,8 @@ cask "font-inter-tight"
 # ═══════════════════════════════════════════════════════════════
 mas "WireGuard", id: 1451685025
 mas "Xcode", id: 497799835
-mas "Keynote", id: 409183694
-mas "Numbers", id: 409203825
-mas "Pages", id: 409201541
+mas "Keynote", id: 361285480
+mas "Numbers", id: 361304891
+mas "Pages", id: 361309726
 mas "iMovie", id: 408981434
 mas "GarageBand", id: 682658836

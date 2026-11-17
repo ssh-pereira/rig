@@ -1,0 +1,11 @@
+#!/bin/bash
+# Reloads the login agent that puts the SSH keys into ssh-agent, whenever the
+# plist or the loader script changes (launchd only re-reads a plist on reload).
+# plist hash:  {{ include "Library/LaunchAgents/local.rig.ssh-add.plist.tmpl" | sha256sum }}
+# loader hash: {{ include "dot_local/bin/executable_ssh-load-keys" | sha256sum }}
+set -uo pipefail
+plist="$HOME/Library/LaunchAgents/local.rig.ssh-add.plist"
+[[ -f "$plist" ]] || exit 0
+echo "▶ ssh-agent loader"
+launchctl bootout "gui/$(id -u)/local.rig.ssh-add" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$plist" && echo "  reloaded"
