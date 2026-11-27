@@ -97,7 +97,7 @@ brew "teamookla/speedtest/speedtest"
 #  Languages & runtimes
 # ═══════════════════════════════════════════════════════════════
 brew "bun"                      # JS runtime + package manager
-brew "node@24"
+brew "node@24", link: true         # keg-only: link so `node` works outside mise projects
 brew "uv"                       # Python packaging, ~50x faster than pip
 brew "shfmt"                    # shell formatter (Claude format hook)
 

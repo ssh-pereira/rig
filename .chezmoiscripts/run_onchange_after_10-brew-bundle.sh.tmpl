@@ -24,16 +24,43 @@ BREWFILE="{{ .chezmoi.sourceDir }}/Brewfile"
 
 brew update
 
-# Mac App Store apps need an active sign-in. Don't fail the whole run over it.
-if ! mas account >/dev/null 2>&1; then
-  echo "  ⚠ not signed into the Mac App Store — 'mas' entries will be skipped."
-  echo "    Sign in to the App Store, then: brew bundle install --file=$BREWFILE"
-  # skip every mas entry instead of letting mas hang on a sign-in prompt
-  export HOMEBREW_BUNDLE_MAS_SKIP="$(grep -oE "id: [0-9]+" "$BREWFILE" | awk '{print $2}' | tr '\n' ' ')"
+# ---------- Mac App Store ----------
+# mas 7 removed `mas account`, so there is no longer a way to check the App Store
+# sign-in up front (the old check always failed → every mas entry was silently
+# skipped). mas 7 also runs its installs through sudo, which needs a terminal to
+# ask for the password. So: attempt the App Store apps only when there's a
+# terminal, and let a missing sign-in fail those entries without failing the run.
+mas_ids="$(grep -oE "id: [0-9]+" "$BREWFILE" | awk '{print $2}' | tr '\n' ' ')"
+if [[ -t 0 ]]; then
+  echo "  App Store apps: needs you signed into the App Store; mas may ask for your password."
+else
+  echo "  ⚠ no terminal for mas's sudo prompt — App Store entries skipped."
+  echo "    From a terminal: brew bundle install --file=$BREWFILE"
+  export HOMEBREW_BUNDLE_MAS_SKIP="$mas_ids"
+fi
+
+# ---------- Claude desktop app ----------
+# Installing the `claude` cask over a Claude.app that's running, or that was
+# installed outside Homebrew (the usual case: you're running this setup from it),
+# can leave a half-finished upgrade in /opt/homebrew/Caskroom/claude and a broken
+# app. Skip it in that case; adopt it later with Claude quit:
+#   brew install --cask --force claude
+claude_running() { ps -axo comm= | grep -qx '/Applications/Claude.app/Contents/MacOS/Claude'; }
+if claude_running ||
+  { [[ -d /Applications/Claude.app ]] && ! brew list --cask claude >/dev/null 2>&1; }; then
+  echo "  Claude.app is running or not Homebrew-managed — skipping the claude cask."
+  export HOMEBREW_BUNDLE_CASK_SKIP="${HOMEBREW_BUNDLE_CASK_SKIP:-} claude"
 fi
 
 brew bundle install --file="$BREWFILE" || {
   echo "  ⚠ some entries failed. Re-run: brew bundle install --file=$BREWFILE"
 }
+
+# ---------- zsh completion dirs ----------
+# The Homebrew installer leaves $(brew --prefix)/share group-writable, and
+# .zshrc's daily `compinit` audit then stops every new shell with "insecure
+# directories". Group-writable fpath dirs are a real code-injection risk, so fix
+# the permission rather than silencing the audit.
+chmod go-w "$(brew --prefix)/share" "$(brew --prefix)/share/zsh" "$(brew --prefix)/share/zsh/site-functions" 2>/dev/null || true
 
 echo "  done"

@@ -9,17 +9,23 @@ Setting up a new Mac is one command. Changing something is edit → push → `ri
 ## Fresh Mac
 
 ```bash
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply ssh-pereira/rig
+sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin" init --apply --use-builtin-git true --source "$HOME/dev/hugo/rig" ssh-pereira/rig
 ```
 
 chezmoi downloads itself (no Homebrew needed), clones this repo, prompts for machine type and identity, then:
+
+- `--source` clones straight into `~/dev/hugo/rig`, the `sourceDir` that `.chezmoi.toml.tmpl` sets. Without it chezmoi clones to `~/.local/share/chezmoi`, then the generated config points at a folder that doesn't exist and the first apply fails.
+- `--use-builtin-git true`: on a fresh Mac `/usr/bin/git` is only a stub that asks for the Command Line Tools, which aren't installed yet.
+- `-b ~/.local/bin` puts the chezmoi binary on the PATH that `.zshrc` sets, instead of `./bin` in whatever folder you ran this from.
 
 1. installs Xcode Command Line Tools and Homebrew
 2. runs `brew bundle` against the [Brewfile](Brewfile)
 3. writes every dotfile into place
 4. installs tmux plugins
 
-**Three things it can't do for you:** sign into your Apple ID (for `mas` apps), click through the Command Line Tools dialog, and sign into 1Password.
+**Things it can't do for you:** sign into your Apple ID (for `mas` apps), click through the Command Line Tools dialog, type your password for `sudo` (Homebrew, some casks, and App Store installs ask for it), and sign into 1Password.
+
+The Homebrew step asks for your password once (`sudo -v`) before running the installer. The installer's `NONINTERACTIVE` mode can't prompt for a password, so without an open sudo session it aborts with "Insufficient permissions".
 
 Two opt-in steps, kept out of the default run because they change system state:
 
@@ -82,6 +88,7 @@ Brewfile                    everything Homebrew installs
 
 .chezmoiscripts/
   run_once_before_00-install-homebrew.sh    bootstrap
+  run_onchange_after_08-github-known-hosts.sh pins GitHub's SSH host keys
   run_onchange_after_10-brew-bundle.sh.tmpl re-runs when the Brewfile changes
   run_onchange_after_20-tmux-plugins.sh.tmpl
   run_once_after_30-macos-defaults.sh       opt-in
