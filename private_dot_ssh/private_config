@@ -14,6 +14,17 @@ Host github.com
   AddKeysToAgent yes
   UseKeychain yes
 
+# Mac mini worker, reached only over Tailscale (MagicDNS name "mini").
+# Dedicated key, never reused for GitHub; passphrase lives in the Keychain.
+Host mini
+  HostName mini
+  User hugo
+  IdentityFile ~/.ssh/mini
+  IdentitiesOnly yes
+  ForwardAgent no
+  AddKeysToAgent yes
+  UseKeychain yes
+
 Host *
   # never offer every key in the agent to every server
   IdentitiesOnly yes
