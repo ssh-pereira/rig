@@ -26,6 +26,15 @@ if ! xcode-select -p >/dev/null 2>&1; then
 fi
 
 echo "  installing Homebrew…"
+# NONINTERACTIVE skips the "Press RETURN" prompt but also refuses to ask for a
+# password: it needs a sudo session that's already open, or it aborts with
+# "Insufficient permissions to install Homebrew". So open one first. `sudo -v`
+# asks for the password once in this terminal; the installer's own `sudo -n`
+# calls then reuse that session (same tty, within sudo's 5-minute timeout).
+if ! sudo -n true 2>/dev/null; then
+  echo "  Homebrew needs admin rights to create /opt/homebrew — enter your password:"
+  sudo -v
+fi
 NONINTERACTIVE=1 /bin/bash -c \
   "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
