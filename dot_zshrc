@@ -113,7 +113,7 @@ alias ....='cd ../../..'
 alias dev='cd ~/dev'
 alias hill='cd ~/dev/hill'
 alias forge='cd ~/dev/forge'
-alias mini='ssh -t mini "tmux new -A -s main"'   # persistent tmux session on the Mac mini
+alias mini='ssh -t mini "/opt/homebrew/bin/tmux new -A -s main"'   # persistent tmux session on the Mac mini
 
 # --- git ---
 alias g='git'
